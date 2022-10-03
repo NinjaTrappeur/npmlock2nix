@@ -425,12 +425,13 @@ rec {
                         , sourceOverrides ? { }
                         , githubSourceHashMap ? { }
                         , passthru ? { }
+                        , npmExtraArgs ? [ ]
                         , ...
                         }@args:
         assert (preInstallLinks != null) ->
           throw "`preInstallLinks` was removed use `sourceOverrides";
         let
-          cleanArgs = builtins.removeAttrs args [ "src" "packageJson" "packageLockJson" "buildInputs" "nativeBuildInputs" "nodejs" "preBuild" "postBuild" "sourceOverrides" "githubSourceHashMap" ];
+          cleanArgs = builtins.removeAttrs args [ "src" "packageJson" "packageLockJson" "buildInputs" "nativeBuildInputs" "nodejs" "preBuild" "postBuild" "sourceOverrides" "githubSourceHashMap" "npmExtraArgs" ];
           lockfile = readPackageLikeFile packageLockJson;
           packagefile = readPackageLikeFile packageJson;
 
@@ -473,10 +474,10 @@ rec {
           buildPhase = ''
             runHook preBuild
             export HOME=.
-            npm ci --nodedir=${nodeSource nodejs} --ignore-scripts
+            npm ci --nodedir=${nodeSource nodejs} --ignore-scripts ${builtins.concatStringsSep " " npmExtraArgs}
             test -d node_modules/.bin && patchShebangs node_modules/.bin
-            npm rebuild --offline --nodedir=${nodeSource nodejs} ${builtins.concatStringsSep " " allDependenciesNames}
-            npm install --no-save --offline --nodedir=${nodeSource nodejs}
+            npm rebuild --offline --nodedir=${nodeSource nodejs} ${builtins.concatStringsSep " " npmExtraArgs} ${builtins.concatStringsSep " " allDependenciesNames}
+            npm install --no-save --offline --nodedir=${nodeSource nodejs} ${builtins.concatStringsSep " " npmExtraArgs}
             test -d node_modules/.bin && patchShebangs node_modules/.bin
             runHook postBuild
           '';
